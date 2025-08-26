@@ -8,13 +8,14 @@ import pandas as pd
 import xlwings as xw
 import os
 from dotenv import load_dotenv
+from pathlib import Path
 import unicodedata
 
 load_dotenv()
 usuario = os.getenv("CORP_USER")
 senha = os.getenv("CORP_PASS")
 
-# =========================
+# ========================= 
 #Automação Corporate
 # =========================
 
@@ -86,8 +87,9 @@ time.sleep(2)
 # Atualização segura do Excel consolidado
 # =========================
 
-arquivo_origem = r"C:\Users\luiz.santos\Projects\Extração-IntegraçãoBD\relatorio_de_cargas\relatorio_de_cargas.Xls"
-arquivo_destino = r"I:\Planejamento-Logístico\02. KPIs\Proposta - Dashboard TERIN\Dashboard TERIN - Operacional.xlsx"
+arquivo_origem = Path(os.getenv("ARQUIVO_ORIGEM"))
+arquivo_destino = Path(os.getenv("ARQUIVO_DESTINO"))
+
 aba_destino = "Carga"
 
 timeout = 30
