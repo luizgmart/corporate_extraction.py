@@ -31,9 +31,9 @@ login_window = app.window(title="Login")
 login_window.wait("visible", timeout=20)
 
 login_window.child_window(class_name="TEdit", found_index=1).click_input()
-send_keys("usuario")
+send_keys(usuario)
 login_window.child_window(class_name="TEdit", found_index=0).click_input()
-send_keys("senha")
+send_keys(senha)
 login_window.child_window(title="OK", class_name="TBitBtn").click_input()
 
 time.sleep(2)
