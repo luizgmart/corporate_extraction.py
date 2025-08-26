@@ -1,5 +1,5 @@
 .env
-*.xls
-*.xlsx
-*.pyc
-__pycache__/
+.xLs
+.xlsx
+.pyc
+.__pycache__/
