@@ -105,6 +105,13 @@ if not os.path.exists(arquivo_origem):
 
 df_novo = pd.read_excel(arquivo_origem)
 
+# Filtra registros com autorização diferente de 0
+if "Autorização" not in df_novo.columns:
+    raise KeyError("Coluna 'Autorização' não encontrada no relatório novo.")
+
+df_novo = df_novo[df_novo["Autorização"].fillna(0).astype(str).str.replace(".0", "").astype(int) != 0]
+
+
 app_excel = xw.App(visible=False)
 wb = app_excel.books.open(arquivo_destino)
 ws = wb.sheets[aba_destino]
