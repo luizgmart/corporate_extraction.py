@@ -16,11 +16,10 @@ usuario = os.getenv("CORP_USER")
 senha = os.getenv("CORP_PASS")
 
 # ========================= 
-#Automação Corporate
+# Automação Corporate
 # =========================
 
-this_window = Desktop(backend="win32").window(title_re=".*Visual Studio Code.*")
-this_window.minimize()
+Desktop(backend="win32").window(title_re=".*Visual Studio Code.*").minimize()
 
 app = Application(backend="win32").start(r"X:\Corporate.exe")
 main_window = app.window(title="Corporate Systems")
@@ -63,13 +62,17 @@ relatorio_window.wait("visible", timeout=20)
 relatorio_window.set_focus()
 time.sleep(1)
 
-inicio = (datetime.today() - timedelta(days=1)).strftime("%d%m%Y 00:00")
-pyautogui.write(inicio, interval=0.2)
-time.sleep(0.5)
+inicio = (datetime.today() - timedelta(days=1)).replace(hour=0, minute=0, second=0).strftime("%d%m%Y %H:%M:%S")
+final  = (datetime.today() - timedelta(days=1)).replace(hour=23, minute=59, second=0).strftime("%d%m%Y %H%M%S")
 
+pyautogui.write(inicio, interval=0.2)
+pyautogui.press('tab')
+pyautogui.write(final, interval=0.2)
+
+time.sleep(0.5)
 pyautogui.click(x=1176, y=483)
 time.sleep(2)
-pyautogui.write(r"relatorio_de_cargas", interval=0.05)
+pyautogui.write("relatorio_de_cargas", interval=0.05)
 pyautogui.press('enter')
 time.sleep(2)
 pyautogui.press('enter')
@@ -89,7 +92,6 @@ time.sleep(2)
 
 arquivo_origem = Path(os.getenv("ARQUIVO_ORIGEM"))
 arquivo_destino = Path(os.getenv("ARQUIVO_DESTINO"))
-
 aba_destino = "Carga"
 
 timeout = 30
@@ -135,23 +137,43 @@ def padronizar_df(df):
         )
     return df
 
-# Renomeia colunas duplicadas e normaliza nomes
+# Define colunas relevantes para comparação
+colunas_chave = [
+    "Autorização", "Data Chegada", "Cliente",
+    "Material", "Placa"
+]
+
+def gerar_chave(df, colunas):
+    df = df.copy()
+    df = df[colunas].fillna("").astype(str)
+    df = df.applymap(lambda x: unicodedata.normalize("NFKD", x).encode("ASCII", "ignore").decode("ASCII").strip().lower())
+    df = df.applymap(lambda x: x.replace(".0", "") if x.endswith(".0") else x)
+    return df.apply(lambda row: '|'.join(row.values), axis=1)
+
+
+# Prepara os DataFrames
 df_existente.columns = deduplicar_colunas(df_existente.columns)
 df_novo.columns = [str(c).strip() for c in df_novo.columns]
 df_existente.columns = [str(c).strip() for c in df_existente.columns]
 
-# Padroniza os valores para comparação
 df_novo_pad = padronizar_df(df_novo)
 df_existente_pad = padronizar_df(df_existente)
 
-# Identifica registros que não existem ainda
-df_para_inserir_pad = pd.concat([df_novo_pad, df_existente_pad, df_existente_pad]).drop_duplicates(keep=False)
+# Verifica se todas as colunas-chave existem
+for col in colunas_chave:
+    if col not in df_novo.columns:
+        raise KeyError(f"Coluna '{col}' não encontrada no relatório novo.")
+    if col not in df_existente.columns:
+        raise KeyError(f"Coluna '{col}' não encontrada na planilha consolidada.")
 
-# Filtra os registros originais correspondentes
-df_para_inserir = df_novo[df_novo_pad.index.isin(df_para_inserir_pad.index)]
+df_novo_pad['chave'] = gerar_chave(df_novo_pad, colunas_chave)
+df_existente_pad['chave'] = gerar_chave(df_existente_pad, colunas_chave)
+
+chaves_existentes = set(df_existente_pad['chave'])
+df_para_inserir = df_novo[df_novo_pad['chave'].apply(lambda x: x not in chaves_existentes)]
 
 # =========================
-# 3) Inserção e registro
+# Inserção segura
 # =========================
 
 if not df_para_inserir.empty:
@@ -178,3 +200,4 @@ log_sheet.range(f"A{ultima_linha_log}").value = [data_hora, quantidade, arquivo_
 
 wb.save()
 wb.close()
+app_excel.quit()
